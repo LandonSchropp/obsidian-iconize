@@ -6,6 +6,7 @@ import IconizePlugin from '@app/main';
 
 export function getNormalizedName(s: string): string {
   return s
+    .replace(/\.svg$/, '')
     .split(/[ -]|[ _]/g)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join('');
@@ -68,8 +69,7 @@ export function generateIcon(
 
   content = content.replace(/(\r\n|\n|\r)/gm, '');
   content = content.replace(/>\s+</gm, '><');
-  const normalizedName =
-    iconName.charAt(0).toUpperCase() + iconName.substring(1);
+  const normalizedName = getNormalizedName(iconName);
 
   if (!validIconName.exec(normalizedName)) {
     logger.info(`Skipping icon with invalid name: ${iconName}`);
@@ -93,7 +93,7 @@ export function generateIcon(
   )[0];
 
   const icon: Icon = {
-    name: normalizedName.split('.svg')[0],
+    name: normalizedName,
     prefix: iconPack.getPrefix(),
     iconPackName: iconPack.getName(),
     displayName: iconName,
