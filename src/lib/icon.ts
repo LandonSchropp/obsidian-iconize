@@ -102,7 +102,7 @@ const checkMissingIcons = async (
   }
 
   // Show notice that background check is running.
-  if (missingIcons.size !== 0) {
+  if (missingIcons.size !== 0 && plugin.getSettings().debugMode) {
     new Notice(
       `[${config.PLUGIN_NAME}] Background Check: found missing icons. Adding missing icons...`,
       10000,
@@ -122,7 +122,7 @@ const checkMissingIcons = async (
   }
 
   // Show notice that background check was finished.
-  if (missingIcons.size !== 0) {
+  if (missingIcons.size !== 0 && plugin.getSettings().debugMode) {
     new Notice(
       `[${config.PLUGIN_NAME}] Background Check: added missing icons`,
       10000,
