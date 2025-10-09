@@ -24,7 +24,6 @@ import dom from '@lib/util/dom';
 import svg from '@lib/util/svg';
 import { TabHeaderLeaf } from '@app/@types/obsidian';
 import emoji from '@app/emoji';
-import { getNormalizedName } from '@app/icon-pack-manager/util';
 
 export default class CustomIconRuleSetting extends IconFolderSetting {
   private app: App;
@@ -123,9 +122,9 @@ export default class CustomIconRuleSetting extends IconFolderSetting {
 
           const modal = new IconsPickerModal(this.app, this.plugin, '');
           modal.onChooseItem = async (item) => {
-            const icon = getNormalizedName(
-              typeof item === 'object' ? item.displayName : item,
-            );
+            // For Icon objects, use prefix + name. For emojis (strings), use as-is.
+            const icon =
+              typeof item === 'object' ? item.prefix + item.name : item;
 
             const rule: CustomRule = {
               rule: this.textComponent.getValue(),
@@ -351,14 +350,16 @@ export default class CustomIconRuleSetting extends IconFolderSetting {
               rule.icon,
             );
             modal.onChooseItem = async (item) => {
-              const icon = typeof item === 'object' ? item.displayName : item;
+              // For Icon objects, use prefix + name. For emojis (strings), use as-is.
+              const icon =
+                typeof item === 'object' ? item.prefix + item.name : item;
               rule.icon = icon;
               dom.setIconForNode(this.plugin, rule.icon, iconPreviewEl);
               iconPreviewEl.innerHTML = svg.setFontSize(
                 iconPreviewEl.innerHTML,
                 20,
               );
-              iconNameEl.innerText = getNormalizedName(rule.icon);
+              iconNameEl.innerText = rule.icon;
             };
             modal.open();
           });
@@ -396,7 +397,7 @@ export default class CustomIconRuleSetting extends IconFolderSetting {
             if (!emoji.isEmoji(rule.icon)) {
               // Tries to add the newly used icon to the icon pack.
               saveIconToIconPack(this.plugin, rule.icon);
-              rule.icon = getNormalizedName(rule.icon);
+              // Icon name is already in correct format (prefix + name)
             }
 
             this.refreshDisplay();
