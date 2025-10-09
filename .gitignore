@@ -28,3 +28,4 @@ docs/.vitepress/cache
 
 # Vitest
 coverage
+styles.css
