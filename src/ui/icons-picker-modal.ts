@@ -75,15 +75,20 @@ export default class IconsPickerModal extends FuzzySuggestModal<any> {
 
         const nextLetter = nextIdentifier(iconName);
         const iconPrefix = iconName.substring(0, nextLetter);
-        const iconPackName = this.plugin
+        const iconPack = this.plugin
           .getIconPackManager()
-          .getIconPackByName(iconPrefix)
-          .getName();
+          .getIconPackByPrefix(iconPrefix);
+
+        // Skip if icon pack doesn't exist (e.g., was deleted)
+        if (!iconPack) {
+          return;
+        }
+
         iconKeys.push({
           name: iconName.substring(nextLetter),
           prefix: iconPrefix,
           displayName: iconName,
-          iconPackName: iconPackName,
+          iconPackName: iconPack.getName(),
           filename: '',
           svgContent: '',
           svgElement: '',
