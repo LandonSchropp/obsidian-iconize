@@ -107,6 +107,12 @@ export const removeIconFromIconPack = (
   const prefix = iconNameWithPrefix.substring(0, identifier);
   const iconName = iconNameWithPrefix.substring(identifier);
   const iconPack = plugin.getIconPackManager().getIconPackByPrefix(prefix);
+
+  // If icon pack doesn't exist (e.g., invalid icon name), skip removal
+  if (!iconPack) {
+    return;
+  }
+
   const duplicatedIcon = plugin.getDataPathByValue(iconNameWithPrefix);
   if (!duplicatedIcon) {
     iconPack.removeIcon(plugin.getIconPackManager().getPath(), iconName);

@@ -20,26 +20,36 @@ export class FileManager {
     content: string,
     absoluteFilename?: string,
   ): Promise<void> {
-    const normalizedFilename = getNormalizedName(filename);
+    const normalizedFilename = getNormalizedName(filename) + '.svg';
     const exists = await this.plugin.app.vault.adapter.exists(
       `${path}/${iconPackName}/${normalizedFilename}`,
     );
     if (exists) {
-      const folderSplit = absoluteFilename.split('/');
-      if (folderSplit.length >= 2) {
-        const folderName = folderSplit[folderSplit.length - 2];
-        const newFilename = folderName + normalizedFilename;
-        await this.plugin.app.vault.adapter.write(
-          `${path}/${iconPackName}/${newFilename}`,
-          content,
-        );
-        logger.info(
-          `Renamed old file ${normalizedFilename} to ${newFilename} due to duplication`,
-        );
-        new Notice(
-          `[${config.PLUGIN_NAME}] Renamed ${normalizedFilename} to ${newFilename} to avoid duplication.`,
-          8000,
-        );
+      if (absoluteFilename) {
+        const folderSplit = absoluteFilename.split('/');
+        if (folderSplit.length >= 2) {
+          const folderName = folderSplit[folderSplit.length - 2];
+          const newFilename = folderName + normalizedFilename;
+          await this.plugin.app.vault.adapter.write(
+            `${path}/${iconPackName}/${newFilename}`,
+            content,
+          );
+          logger.info(
+            `Renamed old file ${normalizedFilename} to ${newFilename} due to duplication`,
+          );
+          new Notice(
+            `[${config.PLUGIN_NAME}] Renamed ${normalizedFilename} to ${newFilename} to avoid duplication.`,
+            8000,
+          );
+        } else {
+          logger.warn(
+            `Could not create icons with duplicated file names (file name: ${normalizedFilename})`,
+          );
+          new Notice(
+            `[${config.PLUGIN_NAME}] Could not create duplicated icon name (${normalizedFilename})`,
+            8000,
+          );
+        }
       } else {
         logger.warn(
           `Could not create icons with duplicated file names (file name: ${normalizedFilename})`,
