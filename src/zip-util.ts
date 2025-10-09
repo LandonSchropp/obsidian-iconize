@@ -48,6 +48,14 @@ export const readZipFile = async (
     const regex = new RegExp(extraPath + '(.+)\\.svg', 'g');
     Object.entries(unzippedFiles.files).forEach(
       ([_, v]: [string, JSZipObject]) => {
+        // Skip macOS metadata files (__MACOSX folder and ._ prefixed files)
+        if (
+          v.name.includes('__MACOSX') ||
+          v.name.split('/').pop()?.startsWith('._')
+        ) {
+          return;
+        }
+
         const matched = v.name.match(regex);
         if (!v.dir && matched && matched.length > 0) {
           files.push(v);
