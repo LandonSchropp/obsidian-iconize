@@ -222,17 +222,28 @@ export class IconPackManager {
       return;
     }
 
+    // Try disk cache first (fastest when files are synced)
     const fullPath = this.path + '/' + iconPack.getName() + '/' + name + '.svg';
-    if (!(await this.plugin.app.vault.adapter.exists(fullPath))) {
-      logger.error(
-        `Icon with name '${name}' was not found (full path: ${fullPath})`,
-      );
+    if (await this.plugin.app.vault.adapter.exists(fullPath)) {
+      const content = await this.plugin.app.vault.adapter.read(fullPath);
+      const icon = generateIcon(iconPack, name, content);
+      this.preloadedIcons.push(icon);
       return;
     }
 
-    const content = await this.plugin.app.vault.adapter.read(fullPath);
-    const icon = generateIcon(iconPack, name, content);
-    this.preloadedIcons.push(icon);
+    // Fallback to in-memory icons from zip (mobile/sync scenarios)
+    const existingIcon = iconPack
+      .getIcons()
+      .find((icon) => getNormalizedName(icon.name) === name);
+    if (existingIcon) {
+      this.preloadedIcons.push(existingIcon);
+      return;
+    }
+
+    // Only error if both disk and memory sources fail
+    logger.error(
+      `Icon with name '${name}' was not found (full path: ${fullPath})`,
+    );
   }
 
   public async createCustomIconPackDirectory(dir: string): Promise<void> {

@@ -129,6 +129,9 @@ export default class IconizePlugin extends Plugin {
     // if (!this.doesUseCustomLucideIconPack()) {
     await this.iconPackManager.init();
     // }
+    // Load all icons from zip files into memory before trying to load used icons.
+    // This ensures icons are available even if .svg cache files don't sync (e.g., mobile).
+    await this.iconPackManager.loadAll();
     // TODO: Check if needed
     await this.iconPackManager.loadUsedIcons([...usedIconNames]);
 
