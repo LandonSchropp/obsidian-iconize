@@ -872,8 +872,9 @@ export default class IconizePlugin extends Plugin {
   }
 
   addFolderIcon(path: string, icon: Icon | string): void {
+    // For Icon objects, use prefix + name. For emojis (strings), use as-is.
     const iconName = getNormalizedName(
-      typeof icon === 'object' ? icon.displayName : icon,
+      typeof icon === 'object' ? icon.prefix + icon.name : icon,
     );
 
     this.data[path] = iconName;

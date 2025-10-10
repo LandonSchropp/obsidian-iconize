@@ -6,6 +6,7 @@ import dom from '@app/lib/util/dom';
 import { saveIconToIconPack } from '@app/util';
 import {
   getSvgFromLoadedIcon,
+  getNormalizedName,
   nextIdentifier,
 } from '@app/icon-pack-manager/util';
 
@@ -128,8 +129,10 @@ export default class IconsPickerModal extends FuzzySuggestModal<any> {
   }
 
   onChooseItem(item: Icon | string): void {
-    const iconNameWithPrefix =
-      typeof item === 'object' ? item.displayName : item;
+    // For Icon objects, use prefix + name. For emojis (strings), use as-is.
+    const iconNameWithPrefix = getNormalizedName(
+      typeof item === 'object' ? item.prefix + item.name : item,
+    );
     dom.createIconNode(this.plugin, this.path, iconNameWithPrefix);
     this.onSelect?.(iconNameWithPrefix);
     this.plugin.addFolderIcon(this.path, item);
