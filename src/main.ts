@@ -672,7 +672,6 @@ export default class IconizePlugin extends Plugin {
               logger.warn(
                 `Something went wrong while saving icon to icon pack (error: ${e})`,
               );
-              new Notice(e.message);
               return;
             }
 
