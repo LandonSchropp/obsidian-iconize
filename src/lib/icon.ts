@@ -131,6 +131,11 @@ const checkMissingIcons = async (
 
   // Remove all icon files that can not be found in the data.
   for (const iconPack of plugin.getIconPackManager().getIconPacks()) {
+    // Custom icon packs are user-managed plain SVGs - never delete them.
+    if (iconPack.getIsCustom()) {
+      continue;
+    }
+
     // Checks if the icon pack exists.
     const doesIconPackExist = await plugin.app.vault.adapter.exists(
       `${plugin.getIconPackManager().getPath()}/${iconPack.getName()}`,

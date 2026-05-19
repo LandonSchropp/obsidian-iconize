@@ -151,6 +151,11 @@ export class IconPackManager {
   }
 
   public async extractIcon(icon: Icon, iconContent: string): Promise<void> {
+    const iconPack = this.getIconPackByName(icon.iconPackName);
+    if (iconPack?.getIsCustom()) {
+      return;
+    }
+
     const doesIconPackDirExist = await this.plugin.app.vault.adapter.exists(
       `${this.path}/${icon.iconPackName}`,
     );

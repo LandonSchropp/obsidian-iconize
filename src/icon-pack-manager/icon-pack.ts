@@ -92,4 +92,8 @@ export class IconPack {
   public getIcons(): Icon[] {
     return this.icons;
   }
+
+  public getIsCustom(): boolean {
+    return this.isCustom;
+  }
 }
