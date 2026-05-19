@@ -106,6 +106,7 @@ export class IconPackManager {
         }
       }
 
+      iconPack.setIcons(loadedIcons);
       if (!this.getIconPackByName(folderName)) {
         this.iconPacks.push(iconPack);
         logger.info(
