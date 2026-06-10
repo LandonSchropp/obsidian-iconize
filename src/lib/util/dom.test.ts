@@ -273,4 +273,26 @@ describe('createIconNode', () => {
     dom.createIconNode(plugin, 'test', 'IbTest');
     expect(document.body.innerHTML).toEqual('<div data-path="test"></div>');
   });
+
+  it('should return true when an icon node is attached', () => {
+    const el = document.createElement('div');
+    el.setAttribute('data-path', 'test');
+    el.innerHTML = '<div class="nav-folder-title-content"></div>';
+    document.body.appendChild(el);
+    const result = dom.createIconNode(plugin, 'test', 'IbTest');
+    expect(result).toBe(true);
+  });
+
+  it('should return false when the data-path element does not exist', () => {
+    const result = dom.createIconNode(plugin, 'missing', 'IbTest');
+    expect(result).toBe(false);
+  });
+
+  it('should return false when no title content element is found', () => {
+    const el = document.createElement('div');
+    el.setAttribute('data-path', 'test');
+    document.body.appendChild(el);
+    const result = dom.createIconNode(plugin, 'test', 'IbTest');
+    expect(result).toBe(false);
+  });
 });

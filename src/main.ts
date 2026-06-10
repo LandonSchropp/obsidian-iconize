@@ -313,6 +313,47 @@ export default class IconizePlugin extends Plugin {
       }),
     );
 
+    // Creation event. Fires for both manual creates and files arriving via
+    // Obsidian Sync from another device. The metadataCache `resolve` handler
+    // may run before the file-explorer has painted the new row, in which case
+    // dom.createIconNode silently no-ops. This handler is the backstop: it
+    // waits one paint and tries again.
+    this.registerEvent(
+      this.app.vault.on('create', (file) => {
+        if (!(file instanceof TFile)) return;
+        if (!this.getSettings().iconInFrontmatterEnabled) return;
+
+        requestAnimationFrame(() => {
+          if (
+            document.querySelector(`[data-path="${file.path}"] .iconize-icon`)
+          ) {
+            return;
+          }
+
+          const fileCache = this.app.metadataCache.getFileCache(file);
+          const iconFrontmatterName =
+            this.getSettings().iconInFrontmatterFieldName;
+          const iconName = fileCache?.frontmatter?.[iconFrontmatterName];
+          if (typeof iconName !== 'string' || !iconName) return;
+
+          const iconColorFrontmatterName =
+            this.getSettings().iconColorInFrontmatterFieldName;
+          const rawColor = fileCache?.frontmatter?.[iconColorFrontmatterName];
+          const iconColor = typeof rawColor === 'string' ? rawColor : undefined;
+
+          const attached = dom.createIconNode(this, file.path, iconName, {
+            color: iconColor,
+          });
+          if (attached) {
+            IconCache.getInstance().set(file.path, {
+              iconNameWithPrefix: iconName,
+              iconColor,
+            });
+          }
+        });
+      }),
+    );
+
     if (this.getSettings().iconsInNotesEnabled) {
       this.registerMarkdownPostProcessor((el) =>
         processIconInTextMarkdown(this, el),
@@ -656,11 +697,21 @@ export default class IconizePlugin extends Plugin {
             }
 
             const cachedIcon = IconCache.getInstance().get(file.path);
-            if (
+            const cacheMatches =
               newIconName === cachedIcon?.iconNameWithPrefix &&
-              iconColor === cachedIcon?.iconColor
-            ) {
-              return;
+              iconColor === cachedIcon?.iconColor;
+            if (cacheMatches) {
+              // Trust the cache only if the icon is still attached. Obsidian's
+              // file-explorer can rebuild a row after the icon was inserted
+              // (e.g. when Sync rewrites the file), leaving the cache pointing
+              // at a node that is no longer in the DOM.
+              const iconInDOM = !!document.querySelector(
+                `[data-path="${file.path}"] .iconize-icon`,
+              );
+              if (iconInDOM) {
+                return;
+              }
+              IconCache.getInstance().invalidate(file.path);
             }
 
             this.frontmatterCache.add(file.path);
@@ -675,15 +726,20 @@ export default class IconizePlugin extends Plugin {
               return;
             }
 
-            dom.createIconNode(this, file.path, newIconName, {
+            const attached = dom.createIconNode(this, file.path, newIconName, {
               color: iconColor,
             });
             this.addFolderIcon(file.path, newIconName);
             this.addIconColor(file.path, iconColor);
-            IconCache.getInstance().set(file.path, {
-              iconNameWithPrefix: newIconName,
-              iconColor,
-            });
+            // Only cache the icon if it was actually attached to the DOM. If
+            // the row was not yet rendered, leave the cache empty so a later
+            // resolve event (or the create handler below) can retry.
+            if (attached) {
+              IconCache.getInstance().set(file.path, {
+                iconNameWithPrefix: newIconName,
+                iconColor,
+              });
+            }
 
             // Update icon in tab when setting is enabled.
             if (this.getSettings().iconInTabsEnabled) {

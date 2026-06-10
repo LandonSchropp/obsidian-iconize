@@ -115,20 +115,21 @@ interface CreateOptions {
  * @param path Path for which the icon node will be created.
  * @param iconName Name of the icon or emoji to add.
  * @param color Optional color of the icon to add.
+ * @returns `true` if an icon node was attached, `false` if the target DOM was not ready.
  */
 const createIconNode = (
   plugin: IconizePlugin,
   path: string,
   iconName: string,
   options?: CreateOptions,
-): void => {
+): boolean => {
   // Get the container from the provided options or try to find the node that has the
   // path from the document itself.
   const node =
     options?.container ?? document.querySelector(`[data-path="${path}"]`);
   if (!node) {
     logger.warn(`Element with data path not found (path: ${path})`);
-    return;
+    return false;
   }
 
   // Get the folder or file title node.
@@ -138,7 +139,7 @@ const createIconNode = (
 
     if (!titleNode) {
       logger.warn(`Element with title node not found (path: ${path})`);
-      return;
+      return false;
     }
   }
 
@@ -156,6 +157,8 @@ const createIconNode = (
 
     node.insertBefore(iconNode, titleNode);
   }
+
+  return true;
 };
 
 /**
