@@ -156,9 +156,8 @@ describe('setIconForNode', () => {
   });
 
   it('should set `shouldApplyAllStyles` to `true` by default', () => {
-    const applyAll = vi
-      .spyOn(style, 'applyAll')
-      .mockImplementationOnce(() => '');
+    getSvgFromLoadedIcon.mockReturnValue('<svg test-icon="IbTest"></svg>');
+    const applyAll = vi.spyOn(style, 'applyAll').mockReturnValue('');
 
     const node = document.createElement('div');
     dom.setIconForNode(plugin, 'IbTest', node, { color: 'blue' });
@@ -166,6 +165,16 @@ describe('setIconForNode', () => {
 
     dom.setIconForNode(plugin, 'IbTest', node);
     expect(applyAll).toBeCalledTimes(2);
+  });
+
+  it('should leave node empty when icon is not found and is not an emoji', () => {
+    getSvgFromLoadedIcon.mockReset();
+    getSvgFromLoadedIcon.mockReturnValue('');
+
+    const node = document.createElement('div');
+    dom.setIconForNode(plugin, 'LaCalendarTuesday', node);
+
+    expect(node.innerHTML).toEqual('');
   });
 });
 

@@ -86,12 +86,16 @@ const setIconForNode = (
       iconContent = svg.colorize(iconContent, options.color);
     }
     node.innerHTML = iconContent;
-  } else {
-    const parsedEmoji =
-      emoji.parseEmoji(plugin.getSettings().emojiStyle, iconName) ?? iconName;
-    node.innerHTML = options?.shouldApplyAllStyles
-      ? style.applyAll(plugin, parsedEmoji, node)
-      : parsedEmoji;
+  } else if (emoji.isEmoji(iconName)) {
+    const parsedEmoji = emoji.parseEmoji(
+      plugin.getSettings().emojiStyle,
+      iconName,
+    );
+    if (parsedEmoji) {
+      node.innerHTML = options?.shouldApplyAllStyles
+        ? style.applyAll(plugin, parsedEmoji, node)
+        : parsedEmoji;
+    }
   }
 
   node.setAttribute('title', iconName);
