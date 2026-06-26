@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mergePathEntriesFromDisk } from './data-merge';
+import { diffIconData, mergePathEntriesFromDisk } from './data-merge';
 
 describe('mergePathEntriesFromDisk', () => {
   it('keeps the in-memory settings', () => {
@@ -59,5 +59,63 @@ describe('mergePathEntriesFromDisk', () => {
     const result = mergePathEntriesFromDisk(inMemory, null);
 
     expect(result).toBe(inMemory);
+  });
+});
+
+describe('diffIconData', () => {
+  it('reports paths that were added', () => {
+    const previous = { settings: {} };
+    const next = { settings: {}, 'Areas/AI': 'TiRobot' };
+
+    const result = diffIconData(previous, next);
+
+    expect(result.changed).toEqual([['Areas/AI', 'TiRobot']]);
+    expect(result.removed).toEqual([]);
+  });
+
+  it('reports paths that were removed', () => {
+    const previous = { settings: {}, 'Areas/AI': 'TiRobot' };
+    const next = { settings: {} };
+
+    const result = diffIconData(previous, next);
+
+    expect(result.removed).toEqual(['Areas/AI']);
+    expect(result.changed).toEqual([]);
+  });
+
+  it('reports paths whose icon changed', () => {
+    const previous = { settings: {}, 'Areas/AI': 'TiRobot' };
+    const next = { settings: {}, 'Areas/AI': 'TiBrain' };
+
+    const result = diffIconData(previous, next);
+
+    expect(result.changed).toEqual([['Areas/AI', 'TiBrain']]);
+  });
+
+  it('reports paths whose color changed', () => {
+    const previous = {
+      settings: {},
+      'Areas/AI': { iconName: 'TiRobot', iconColor: 'red' },
+    };
+    const next = {
+      settings: {},
+      'Areas/AI': { iconName: 'TiRobot', iconColor: 'blue' },
+    };
+
+    const result = diffIconData(previous, next);
+
+    expect(result.changed).toEqual([
+      ['Areas/AI', { iconName: 'TiRobot', iconColor: 'blue' }],
+    ]);
+  });
+
+  it('ignores unchanged paths and the settings key', () => {
+    const previous = { settings: { fontSize: 1 }, 'Areas/AI': 'TiRobot' };
+    const next = { settings: { fontSize: 2 }, 'Areas/AI': 'TiRobot' };
+
+    const result = diffIconData(previous, next);
+
+    expect(result.changed).toEqual([]);
+    expect(result.removed).toEqual([]);
   });
 });

@@ -29,3 +29,41 @@ export function mergePathEntriesFromDisk<T extends Record<string, unknown>>(
 
   return result as T;
 }
+
+export interface IconDataDiff {
+  /** Paths present in `previous` but no longer in `next`. */
+  removed: string[];
+  /** Paths added or whose icon/color changed, with their new value. */
+  changed: [string, unknown][];
+}
+
+/**
+ * Computes which icon path entries were added/changed or removed between two
+ * data objects. The `settings` key is ignored. Used to re-render only the icons
+ * that actually changed when `data.json` is updated externally (e.g. by Sync).
+ */
+export function diffIconData(
+  previous: Record<string, unknown>,
+  next: Record<string, unknown>,
+): IconDataDiff {
+  const removed: string[] = [];
+  const changed: [string, unknown][] = [];
+
+  for (const key of Object.keys(previous)) {
+    if (key !== 'settings' && !(key in next)) {
+      removed.push(key);
+    }
+  }
+
+  for (const [key, value] of Object.entries(next)) {
+    if (key === 'settings') {
+      continue;
+    }
+
+    if (JSON.stringify(previous[key]) !== JSON.stringify(value)) {
+      changed.push([key, value]);
+    }
+  }
+
+  return { removed, changed };
+}

@@ -6,6 +6,8 @@ import {
   requireApiVersion,
   MarkdownView,
   Notice,
+  debounce,
+  normalizePath,
 } from 'obsidian';
 import {
   EditorWithEditorComponent,
@@ -43,7 +45,7 @@ import {
 } from './editor/live-preview';
 import { PositionField, buildPositionField } from './editor/live-preview/state';
 import { calculateInlineTitleSize } from './lib/util/text';
-import { mergePathEntriesFromDisk } from './lib/data-merge';
+import { diffIconData, mergePathEntriesFromDisk } from './lib/data-merge';
 import {
   processIconInTextMarkdown,
   processIconInLinkMarkdown,
@@ -352,6 +354,25 @@ export default class IconizePlugin extends Plugin {
             });
           }
         });
+      }),
+    );
+
+    // Reload icons when data.json changes on disk. Obsidian Sync writes the
+    // file directly (bypassing the plugin), so without this the running
+    // instance would never reflect icons set on another device until restart.
+    // The `raw` event fires for changes to config files under `.obsidian`.
+    const dataPath = normalizePath(`${this.manifest.dir}/data.json`);
+    const onExternalDataChange = debounce(
+      () => this.handleExternalDataChange(),
+      250,
+      true,
+    );
+    this.registerEvent(
+      // `raw` is not part of the public Vault typings.
+      (this.app.vault as any).on('raw', (changedPath: string) => {
+        if (changedPath === dataPath) {
+          onExternalDataChange();
+        }
       }),
     );
 
@@ -991,6 +1012,46 @@ export default class IconizePlugin extends Plugin {
 
   async saveIconFolderData(): Promise<void> {
     await this.mutateData(() => {});
+  }
+
+  /**
+   * Reloads icon path entries from the on-disk `data.json` and re-renders only
+   * the icons that changed. Triggered when the file is modified externally
+   * (e.g. by Obsidian Sync) so icons set on another device appear without a
+   * restart. Our own writes produce no diff here, so this does not loop.
+   */
+  private async handleExternalDataChange(): Promise<void> {
+    const onDisk = await this.loadData();
+    if (!onDisk) {
+      return;
+    }
+
+    const next = mergePathEntriesFromDisk(this.data, onDisk);
+    const { removed, changed } = diffIconData(this.data, next);
+    if (removed.length === 0 && changed.length === 0) {
+      return;
+    }
+
+    this.data = next;
+
+    for (const path of removed) {
+      dom.removeIconInPath(path);
+      IconCache.getInstance().invalidate(path);
+    }
+
+    for (const [path, value] of changed) {
+      const iconName =
+        typeof value === 'string'
+          ? value
+          : (value as FolderIconObject).iconName;
+      const iconColor =
+        typeof value === 'string'
+          ? undefined
+          : (value as FolderIconObject).iconColor;
+      if (iconName) {
+        dom.createIconNode(this, path, iconName, { color: iconColor });
+      }
+    }
   }
 
   async checkRecentlyUsedIcons(): Promise<void> {
