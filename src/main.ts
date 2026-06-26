@@ -43,6 +43,7 @@ import {
 } from './editor/live-preview';
 import { PositionField, buildPositionField } from './editor/live-preview/state';
 import { calculateInlineTitleSize } from './lib/util/text';
+import { mergePathEntriesFromDisk } from './lib/data-merge';
 import {
   processIconInTextMarkdown,
   processIconInLinkMarkdown,
@@ -841,33 +842,30 @@ export default class IconizePlugin extends Plugin {
     console.log('unloading obsidian-icon-folder');
   }
 
-  renameFolder(newPath: string, oldPath: string): void {
-    if (!this.data[oldPath] || newPath === oldPath) {
-      return;
-    }
+  async renameFolder(newPath: string, oldPath: string): Promise<void> {
+    await this.mutateData(() => {
+      if (!this.data[oldPath] || newPath === oldPath) {
+        return;
+      }
 
-    Object.defineProperty(
-      this.data,
-      newPath,
-      Object.getOwnPropertyDescriptor(this.data, oldPath),
-    );
-    delete this.data[oldPath];
-    this.saveIconFolderData();
+      this.data[newPath] = this.data[oldPath];
+      delete this.data[oldPath];
+    });
   }
 
-  addIconColor(path: string, iconColor: string): void {
-    const pathData = this.getData()[path];
+  async addIconColor(path: string, iconColor: string): Promise<void> {
+    await this.mutateData(() => {
+      const pathData = this.data[path];
 
-    if (typeof pathData === 'string') {
-      this.getData()[path] = {
-        iconName: pathData,
-        iconColor,
-      };
-    } else {
-      (pathData as FolderIconObject).iconColor = iconColor;
-    }
-
-    this.saveIconFolderData();
+      if (typeof pathData === 'string') {
+        this.data[path] = {
+          iconName: pathData,
+          iconColor,
+        };
+      } else if (pathData) {
+        (pathData as FolderIconObject).iconColor = iconColor;
+      }
+    });
   }
 
   getIconColor(path: string): string | undefined {
@@ -884,75 +882,69 @@ export default class IconizePlugin extends Plugin {
     return (pathData as FolderIconObject).iconColor;
   }
 
-  removeIconColor(path: string): void {
-    const pathData = this.getData()[path];
+  async removeIconColor(path: string): Promise<void> {
+    await this.mutateData(() => {
+      const pathData = this.data[path];
 
-    if (typeof pathData === 'string') {
-      return;
-    }
-
-    const currentValue = pathData as FolderIconObject;
-    this.getData()[path] = currentValue.iconName;
-
-    this.saveIconFolderData();
-  }
-
-  removeFolderIcon(path: string): void {
-    if (!this.data[path]) {
-      return;
-    }
-
-    // Saves the icon name with prefix to remove it from the icon pack directory later.
-    const iconData = this.data[path];
-
-    delete this.data[path];
-
-    // Removes the icon from the icon pack directory if it is not used as an icon somewhere
-    // else.
-    if (iconData) {
-      let iconNameWithPrefix = iconData as string | FolderIconObject;
-      if (typeof iconData === 'object') {
-        iconNameWithPrefix = (iconData as FolderIconObject).iconName;
-      } else {
-        iconNameWithPrefix = iconData as string;
+      if (typeof pathData !== 'object' || !pathData) {
+        return;
       }
 
-      if (!emoji.isEmoji(iconNameWithPrefix)) {
-        removeIconFromIconPack(this, iconNameWithPrefix);
-      }
-    }
-
-    //this.addIconsToSearch();
-    this.saveIconFolderData();
+      this.data[path] = (pathData as FolderIconObject).iconName;
+    });
   }
 
-  addFolderIcon(path: string, icon: Icon | string): void {
+  async removeFolderIcon(path: string): Promise<void> {
+    // Capture the icon name (read against the freshest on-disk state) so we can
+    // remove it from the icon pack directory after the data write completes.
+    let iconNameWithPrefix: string | null = null;
+
+    await this.mutateData(() => {
+      const iconData = this.data[path];
+      if (!iconData) {
+        return;
+      }
+
+      iconNameWithPrefix =
+        typeof iconData === 'object'
+          ? (iconData as FolderIconObject).iconName
+          : (iconData as string);
+
+      delete this.data[path];
+    });
+
+    // Removes the icon from the icon pack directory if it is not used as an icon
+    // somewhere else.
+    if (iconNameWithPrefix && !emoji.isEmoji(iconNameWithPrefix)) {
+      removeIconFromIconPack(this, iconNameWithPrefix);
+    }
+  }
+
+  async addFolderIcon(path: string, icon: Icon | string): Promise<void> {
     // For Icon objects, use prefix + name. For emojis (strings), use as-is.
     const iconName = getNormalizedName(
       typeof icon === 'object' ? icon.prefix + icon.name : icon,
     );
 
-    this.data[path] = iconName;
+    await this.mutateData(() => {
+      this.data[path] = iconName;
 
-    // Update recently used icons.
-    if (!this.getSettings().recentlyUsedIcons.includes(iconName)) {
-      if (
-        this.getSettings().recentlyUsedIcons.length >=
-        this.getSettings().recentlyUsedIconsSize
-      ) {
-        this.getSettings().recentlyUsedIcons =
-          this.getSettings().recentlyUsedIcons.slice(
-            0,
-            this.getSettings().recentlyUsedIconsSize - 1,
-          );
+      // Update recently used icons.
+      if (!this.getSettings().recentlyUsedIcons.includes(iconName)) {
+        if (
+          this.getSettings().recentlyUsedIcons.length >=
+          this.getSettings().recentlyUsedIconsSize
+        ) {
+          this.getSettings().recentlyUsedIcons =
+            this.getSettings().recentlyUsedIcons.slice(
+              0,
+              this.getSettings().recentlyUsedIconsSize - 1,
+            );
+        }
+
+        this.getSettings().recentlyUsedIcons.unshift(iconName);
       }
-
-      this.getSettings().recentlyUsedIcons.unshift(iconName);
-      this.checkRecentlyUsedIcons();
-    }
-
-    //this.addIconsToSearch();
-    this.saveIconFolderData();
+    });
   }
 
   public getSettings(): IconFolderSettings {
@@ -971,8 +963,34 @@ export default class IconizePlugin extends Plugin {
     this.data = Object.assign({ settings: { ...DEFAULT_SETTINGS } }, {}, data);
   }
 
+  /**
+   * Serializes data writes so that concurrent read-modify-write cycles cannot
+   * interleave and lose each other's updates.
+   */
+  private persistChain: Promise<void> = Promise.resolve();
+
+  /**
+   * The single entry point for writing `data.json`. It reloads the current
+   * on-disk file, refreshes the in-memory icon path entries from it, lets the
+   * caller apply its specific change on top, and writes the result back.
+   *
+   * This prevents a stale in-memory snapshot from clobbering icon entries that
+   * Obsidian Sync wrote to disk from another device while this instance was
+   * running. See {@link mergePathEntriesFromDisk}.
+   */
+  private mutateData(mutate: () => void): Promise<void> {
+    const run = async () => {
+      const onDisk = await this.loadData();
+      this.data = mergePathEntriesFromDisk(this.data, onDisk);
+      mutate();
+      await this.saveData(this.data);
+    };
+    this.persistChain = this.persistChain.then(run, run);
+    return this.persistChain;
+  }
+
   async saveIconFolderData(): Promise<void> {
-    await this.saveData(this.data);
+    await this.mutateData(() => {});
   }
 
   async checkRecentlyUsedIcons(): Promise<void> {
