@@ -8,6 +8,7 @@ import { getFileItemInnerTitleEl, getFileItemTitleEl } from '@app/util';
 import config from '@app/config';
 import { Notice, requireApiVersion } from 'obsidian';
 import { IconCache } from './icon-cache';
+import { syncFolderNoteIcon } from './util/folder-note';
 import { logger } from './logger';
 import { Icon } from '@app/icon-pack-manager';
 import {
@@ -249,6 +250,19 @@ const addAll = (
               titleEl.insertBefore(iconNode, titleInnerEl);
             }
           }
+        }
+      }
+
+      // A folder note's icon also becomes its folder's icon.
+      for (const [dataPath, value] of data) {
+        const iconName = typeof value === 'string' ? value : value.iconName;
+        if (iconName) {
+          syncFolderNoteIcon(
+            plugin,
+            dataPath,
+            iconName,
+            typeof value === 'string' ? undefined : value.iconColor,
+          );
         }
       }
 

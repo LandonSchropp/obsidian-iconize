@@ -45,6 +45,7 @@ import {
 } from './editor/live-preview';
 import { PositionField, buildPositionField } from './editor/live-preview/state';
 import { calculateInlineTitleSize } from './lib/util/text';
+import { syncFolderNoteIcon } from './lib/util/folder-note';
 import { diffIconData, mergePathEntriesFromDisk } from './lib/data-merge';
 import {
   processIconInTextMarkdown,
@@ -327,12 +328,6 @@ export default class IconizePlugin extends Plugin {
         if (!this.getSettings().iconInFrontmatterEnabled) return;
 
         requestAnimationFrame(() => {
-          if (
-            document.querySelector(`[data-path="${file.path}"] .iconize-icon`)
-          ) {
-            return;
-          }
-
           const fileCache = this.app.metadataCache.getFileCache(file);
           const iconFrontmatterName =
             this.getSettings().iconInFrontmatterFieldName;
@@ -343,6 +338,14 @@ export default class IconizePlugin extends Plugin {
             this.getSettings().iconColorInFrontmatterFieldName;
           const rawColor = fileCache?.frontmatter?.[iconColorFrontmatterName];
           const iconColor = typeof rawColor === 'string' ? rawColor : undefined;
+
+          syncFolderNoteIcon(this, file.path, iconName, iconColor);
+
+          if (
+            document.querySelector(`[data-path="${file.path}"] .iconize-icon`)
+          ) {
+            return;
+          }
 
           const attached = dom.createIconNode(this, file.path, iconName, {
             color: iconColor,
@@ -693,6 +696,7 @@ export default class IconizePlugin extends Plugin {
             // If `icon` property is empty, we will remove it from the data and remove the icon.
             if (!newIconName) {
               if (this.frontmatterCache.has(file.path)) {
+                syncFolderNoteIcon(this, file.path, undefined);
                 await this.removeSingleIcon(file);
                 this.frontmatterCache.delete(file.path);
               }
@@ -717,6 +721,8 @@ export default class IconizePlugin extends Plugin {
             if (isHexadecimal(iconColor)) {
               iconColor = stringToHex(iconColor);
             }
+
+            syncFolderNoteIcon(this, file.path, newIconName, iconColor);
 
             const cachedIcon = IconCache.getInstance().get(file.path);
             const cacheMatches =
