@@ -45,7 +45,11 @@ import {
 } from './editor/live-preview';
 import { PositionField, buildPositionField } from './editor/live-preview/state';
 import { calculateInlineTitleSize } from './lib/util/text';
-import { syncFolderNoteIcon } from './lib/util/folder-note';
+import {
+  getFrontmatterIcon,
+  refreshFolderIconsAfterRename,
+  syncFolderNoteIcon,
+} from './lib/util/folder-note';
 import { diffIconData, mergePathEntriesFromDisk } from './lib/data-merge';
 import {
   processIconInTextMarkdown,
@@ -313,7 +317,11 @@ export default class IconizePlugin extends Plugin {
           dom.createIconNode(this, file.path, iconNameWithPrefix);
         }
 
-        this.renameFolder(file.path, oldPath);
+        this.renameFolder(file.path, oldPath).then(() =>
+          requestAnimationFrame(() =>
+            refreshFolderIconsAfterRename(this, file.path, oldPath),
+          ),
+        );
       }),
     );
 
@@ -328,16 +336,8 @@ export default class IconizePlugin extends Plugin {
         if (!this.getSettings().iconInFrontmatterEnabled) return;
 
         requestAnimationFrame(() => {
-          const fileCache = this.app.metadataCache.getFileCache(file);
-          const iconFrontmatterName =
-            this.getSettings().iconInFrontmatterFieldName;
-          const iconName = fileCache?.frontmatter?.[iconFrontmatterName];
-          if (typeof iconName !== 'string' || !iconName) return;
-
-          const iconColorFrontmatterName =
-            this.getSettings().iconColorInFrontmatterFieldName;
-          const rawColor = fileCache?.frontmatter?.[iconColorFrontmatterName];
-          const iconColor = typeof rawColor === 'string' ? rawColor : undefined;
+          const { iconName, iconColor } = getFrontmatterIcon(this, file);
+          if (!iconName) return;
 
           syncFolderNoteIcon(this, file.path, iconName, iconColor);
 
