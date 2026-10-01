@@ -1,3 +1,6 @@
+> [!WARNING]
+> **This repository is 100% vibe coded.** The author did not read any of the code. Use it at your own risk.
+
 # Obsidian Iconize
 
 ![Preview Image](./docs/preview-image.png)
