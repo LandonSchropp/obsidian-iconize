@@ -13,6 +13,13 @@ export default defineConfig({
         branches: 50,
         functions: 60,
         statements: 60,
+        // Fork-authored files must be fully covered.
+        '{src/lib/data-merge.ts,src/lib/util/folder-note.ts}': {
+          lines: 100,
+          branches: 100,
+          functions: 100,
+          statements: 100,
+        },
       },
     },
   },
