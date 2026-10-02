@@ -1,7 +1,8 @@
 import type IconizePlugin from '@app/main';
 import type { FolderIconObject } from '@app/main';
 import type { TFile } from 'obsidian';
-import { isHexadecimal, stringToHex } from '@app/util';
+import { getFileItemTitleEl, isHexadecimal, stringToHex } from '@app/util';
+import type { ExplorerView } from '@app/@types/obsidian';
 import customRule from '../custom-rule';
 import dom from './dom';
 
@@ -70,6 +71,22 @@ const getOwnFolderIcon = (
 };
 
 /**
+ * Returns the title element of a folder's row in the file explorer, if it has
+ * one.
+ */
+const getFolderRow = (
+  plugin: IconizePlugin,
+  folderPath: string,
+): HTMLElement | undefined => {
+  for (const leaf of plugin.app.workspace.getLeavesOfType('file-explorer')) {
+    const fileItem = (leaf.view as ExplorerView).fileItems[folderPath];
+    if (fileItem) {
+      return getFileItemTitleEl(fileItem);
+    }
+  }
+};
+
+/**
  * Mirrors a folder note's icon onto its folder in the file explorer. When the
  * note has no icon, the folder falls back to the icon it has without it.
  * Does nothing for other notes.
@@ -85,8 +102,10 @@ const syncFolderNoteIcon = (
     return;
   }
 
+  const container = getFolderRow(plugin, folderPath);
+
   if (iconName) {
-    dom.createIconNode(plugin, folderPath, iconName, { color });
+    dom.createIconNode(plugin, folderPath, iconName, { color, container });
     return;
   }
 
@@ -94,9 +113,10 @@ const syncFolderNoteIcon = (
   if (ownIcon) {
     dom.createIconNode(plugin, folderPath, ownIcon.iconName, {
       color: ownIcon.color,
+      container,
     });
   } else {
-    dom.removeIconInPath(folderPath);
+    dom.removeIconInPath(folderPath, { container });
   }
 };
 

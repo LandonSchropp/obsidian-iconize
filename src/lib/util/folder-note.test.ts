@@ -51,6 +51,11 @@ const createPlugin = ({
   iconInFrontmatterEnabled?: boolean;
 } = {}): any => ({
   app: {
+    workspace: {
+      getLeavesOfType: () => [
+        { view: { fileItems: { 'Areas/AI': { selfEl: folderEl } } } },
+      ],
+    },
     vault: {
       getAbstractFileByPath: (path: string) =>
         folders.includes(path)
@@ -74,6 +79,7 @@ const createPlugin = ({
   }),
 });
 
+const folderEl = document.createElement('div');
 let createIconNode: ReturnType<typeof vi.spyOn>;
 let removeIconInPath: ReturnType<typeof vi.spyOn>;
 
@@ -147,6 +153,7 @@ describe('syncFolderNoteIcon', () => {
 
       expect(createIconNode).toHaveBeenCalledWith(plugin, 'Areas/AI', 'LiBot', {
         color: '#fff',
+        container: folderEl,
       });
     });
   });
@@ -156,7 +163,9 @@ describe('syncFolderNoteIcon', () => {
       it('removes the folder icon', () => {
         syncFolderNoteIcon(createPlugin(), 'Areas/AI/AI.md', undefined);
 
-        expect(removeIconInPath).toHaveBeenCalledWith('Areas/AI');
+        expect(removeIconInPath).toHaveBeenCalledWith('Areas/AI', {
+          container: folderEl,
+        });
       });
     });
 
@@ -173,7 +182,7 @@ describe('syncFolderNoteIcon', () => {
           plugin,
           'Areas/AI',
           'LiBrain',
-          { color: undefined },
+          { color: undefined, container: folderEl },
         );
       });
 
@@ -194,7 +203,7 @@ describe('syncFolderNoteIcon', () => {
           plugin,
           'Areas/AI',
           'LiBrain',
-          { color: '#000' },
+          { color: '#000', container: folderEl },
         );
       });
     });
@@ -213,7 +222,7 @@ describe('syncFolderNoteIcon', () => {
           plugin,
           'Areas/AI',
           'LiSparkles',
-          { color: '#0f0' },
+          { color: '#0f0', container: folderEl },
         );
       });
     });
@@ -226,7 +235,9 @@ describe('syncFolderNoteIcon', () => {
 
         syncFolderNoteIcon(plugin, 'Areas/AI/AI.md', undefined);
 
-        expect(removeIconInPath).toHaveBeenCalledWith('Areas/AI');
+        expect(removeIconInPath).toHaveBeenCalledWith('Areas/AI', {
+          container: folderEl,
+        });
       });
     });
   });
@@ -262,6 +273,7 @@ describe('refreshFolderIconsAfterRename', () => {
 
       expect(createIconNode).toHaveBeenCalledWith(plugin, 'Areas/ML', 'LiBot', {
         color: '#fff',
+        container: undefined,
       });
     });
   });
@@ -279,7 +291,9 @@ describe('refreshFolderIconsAfterRename', () => {
     it('removes the icon from the folder', () => {
       refreshFolderIconsAfterRename(plugin, 'Areas/ML/AI.md', 'Areas/AI/AI.md');
 
-      expect(removeIconInPath).toHaveBeenCalledWith('Areas/ML');
+      expect(removeIconInPath).toHaveBeenCalledWith('Areas/ML', {
+        container: undefined,
+      });
     });
   });
 
@@ -301,7 +315,7 @@ describe('refreshFolderIconsAfterRename', () => {
         plugin,
         'Areas/AI',
         'LiBrain',
-        { color: undefined },
+        { color: undefined, container: folderEl },
       );
     });
   });
@@ -321,6 +335,7 @@ describe('refreshFolderIconsAfterRename', () => {
 
       expect(createIconNode).toHaveBeenCalledWith(plugin, 'Areas/AI', 'LiBot', {
         color: undefined,
+        container: folderEl,
       });
     });
   });

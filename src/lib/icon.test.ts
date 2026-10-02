@@ -205,13 +205,17 @@ describe('addAll', () => {
   });
 
   let plugin: any;
+  let folderItem: ReturnType<typeof createFileItem>;
   let setIconForNode: ReturnType<typeof vi.spyOn>;
   let createIconNode: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     document.body.innerHTML = '';
     plugin = createPlugin({
-      'Areas/AI': createFileItem('Areas/AI', 'nav-folder-title-content'),
+      'Areas/AI': (folderItem = createFileItem(
+        'Areas/AI',
+        'nav-folder-title-content',
+      )),
       'Areas/AI/AI.md': createFileItem(
         'Areas/AI/AI.md',
         'nav-file-title-content',
@@ -229,6 +233,7 @@ describe('addAll', () => {
 
       expect(createIconNode).toHaveBeenCalledWith(plugin, 'Areas/AI', 'LiBot', {
         color: undefined,
+        container: folderItem.selfEl,
       });
     });
 
@@ -253,7 +258,10 @@ describe('addAll', () => {
           plugin,
           'Areas/AI',
           'LiBot',
-          { color: undefined },
+          {
+            color: undefined,
+            container: folderItem.selfEl,
+          },
         );
         expect(createIconNode.mock.invocationCallOrder[0]).toBeGreaterThan(
           setIconForNode.mock.invocationCallOrder.at(-1)!,
